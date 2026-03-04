@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhysX Solver — Class 10-12</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00f5c4;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --error: #f87171;
+    --success: #4ade80;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,196,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,196,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridMove 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes gridMove {
+    from { transform: translateY(0); }
+    to   { transform: translateY(40px); }
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 1.5rem;
+    overflow-x: auto;
+  }
+
+  .nav-brand {
+    font-weight: 800; font-size: 1rem; white-space: nowrap;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-right: 2rem; padding: 1rem 0;
+  }
+
+  .nav-tab {
+    padding: 1rem 1.1rem; font-size: 0.8rem;
+    font-family: 'Space Mono', monospace; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    border-top: none; border-left: none; border-right: none;
+    background: none; transition: all .2s; white-space: nowrap; letter-spacing: .05em;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .nav-right {
+    margin-left: auto; display: flex; align-items: center;
+    gap: .75rem; padding: .5rem 0;
+  }
+
+  .session-pill {
+    background: rgba(0,245,196,.08); border: 1px solid rgba(0,245,196,.2);
+    color: var(--accent); font-family: 'Space Mono', monospace;
+    font-size: .7rem; padding: .3rem .75rem; border-radius: 50px;
+    cursor: pointer; transition: background .2s; white-space: nowrap;
+  }
+  .session-pill:hover { background: rgba(0,245,196,.14); }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .container {
+    max-width: 900px; margin: 0 auto;
+    padding: 2rem 1.5rem; position: relative; z-index: 1;
+  }
+
+  /* ── HEADER ── */
+  header { text-align: center; margin-bottom: 2rem; animation: fadeDown .6s ease; }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .logo-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #000; font-family: 'Space Mono', monospace; font-size: .68rem;
+    font-weight: 700; padding: .28rem .75rem; border-radius: 2px;
+    letter-spacing: .15em; margin-bottom: .9rem; text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 55%, var(--accent2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: .4rem;
+  }
+
+  .subtitle { color: var(--muted); font-size: .9rem; font-family: 'Space Mono', monospace; }
+
+  /* ── MODE GRID ── */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: .75rem; margin-bottom: 1.5rem;
+    animation: fadeUp .5s ease .1s both;
+  }
+
+  .mode-card {
+    background: var(--card); border: 2px solid var(--border);
+    border-radius: 12px; padding: 1rem .75rem;
+    cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .mode-card:hover { border-color: var(--accent2); transform: translateY(-2px); }
+  .mode-card.active { border-color: var(--accent); background: rgba(0,245,196,.04); }
+
+  .mode-icon { font-size: 1.6rem; margin-bottom: .4rem; }
+  .mode-title { font-weight: 700; font-size: .8rem; margin-bottom: .2rem; }
+  .mode-desc { color: var(--muted); font-size: .68rem; font-family: 'Space Mono', monospace; }
+
+  /* ── INPUT PANEL ── */
+  .input-panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;
+    animation: fadeUp .5s ease .2s both;
+  }
+
+  .panel-label {
+    font-size: .72rem; font-family: 'Space Mono', monospace; color: var(--muted);
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: .9rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .input-row { display: flex; gap: .75rem; margin-bottom: .9rem; flex-wrap: wrap; }
+
+  select, textarea, input[type="text"] {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Syne', sans-serif; font-size: .93rem;
+    border-radius: 8px; padding: .7rem 1rem;
+    transition: border-color .2s, box-shadow .2s; outline: none; width: 100%;
+  }
+  select:focus, textarea:focus, input:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,245,196,.09);
+  }
+  select { cursor: pointer; flex: 1; min-width: 130px; }
+  textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+
+  /* ── CHIPS ── */
+  .chips-label { font-size: .75rem; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: .5rem; letter-spacing: .05em; }
+  .chips { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .9rem; }
+  .chip {
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    padding: .28rem .75rem; border-radius: 50px; font-size: .72rem;
+    cursor: pointer; transition: all .2s; font-family: 'Space Mono', monospace; white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+    padding: .75rem 1.75rem; border: none; border-radius: 8px;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem;
+    cursor: pointer; transition: all .2s; letter-spacing: .02em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #00c4a0); color: #000;
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,245,196,.32); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: .7rem 1.1rem; font-size: .83rem;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── MCQ ── */
+  .q-type-badge {
+    font-size: .68rem; font-family: 'Space Mono', monospace;
+    padding: .2rem .6rem; border-radius: 4px; margin-bottom: .9rem;
+    display: inline-block; font-weight: 700; letter-spacing: .08em;
+  }
+  .q-type-numerical { background: rgba(0,245,196,.15); color: var(--accent); }
+  .q-type-mcq       { background: rgba(124,58,237,.2); color: #a78bfa; }
+  .q-type-tf        { background: rgba(245,158,11,.2); color: var(--accent3); }
+  .q-type-ar        { background: rgba(248,113,113,.2); color: var(--error); }
+  .q-type-fitb      { background: rgba(0,245,196,.15); color: var(--accent); }
+
+  .question-display {
+    font-size: 1rem; font-weight: 700; line-height: 1.6; margin-bottom: 1.1rem;
+    padding: 1rem; background: var(--surface); border-radius: 8px;
+    border-left: 3px solid var(--accent2);
+  }
+
+  .mcq-options { display: flex; flex-direction: column; gap: .55rem; margin-bottom: 1.1rem; }
+
+  .mcq-option {
+    display: flex; align-items: flex-start; gap: .9rem;
+    padding: .8rem 1rem; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; transition: all .2s; font-size: .9rem; line-height: 1.5;
+  }
+  .mcq-option:hover:not(.disabled) { border-color: var(--accent2); background: rgba(124,58,237,.05); }
+  .mcq-option.correct         { border-color: var(--success); background: rgba(74,222,128,.07); }
+  .mcq-option.wrong           { border-color: var(--error);   background: rgba(248,113,113,.07); }
+  .mcq-option.reveal-correct  { border-color: var(--success); background: rgba(74,222,128,.04); }
+  .mcq-option.disabled        { cursor: default; }
+
+  .option-key {
+    min-width: 27px; height: 27px; border-radius: 50%;
+    background: var(--border); display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace; font-size: .72rem; font-weight: 700;
+    flex-shrink: 0; transition: all .2s;
+  }
+  .mcq-option.correct        .option-key { background: var(--success); color: #000; }
+  .mcq-option.wrong          .option-key { background: var(--error); color: #000; }
+  .mcq-option.reveal-correct .option-key { background: var(--success); color: #000; }
+
+  /* ── TF ── */
+  .tf-row { display: flex; gap: .9rem; margin-bottom: 1.1rem; }
+  .tf-btn {
+    flex: 1; padding: 1.1rem; border: 2px solid var(--border);
+    border-radius: 10px; background: var(--surface); color: var(--text);
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+    cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .tf-btn:hover:not(.disabled) { transform: translateY(-2px); }
+  .tf-btn.true-btn:hover:not(.disabled)  { border-color: var(--success); color: var(--success); }
+  .tf-btn.false-btn:hover:not(.disabled) { border-color: var(--error);   color: var(--error);   }
+  .tf-btn.correct  { border-color: var(--success); background: rgba(74,222,128,.1); color: var(--success); }
+  .tf-btn.wrong    { border-color: var(--error);   background: rgba(248,113,113,.1); color: var(--error);   }
+  .tf-btn.disabled { cursor: default; }
+
+  /* ── ASSERTION ── */
+  .ar-stmts { display: flex; flex-direction: column; gap: .65rem; margin-bottom: 1.1rem; }
+  .ar-stmt  { background: var(--surface); border-radius: 8px; padding: .9rem 1rem; font-size: .9rem; line-height: 1.6; }
+  .ar-lbl   { font-family: 'Space Mono', monospace; font-size: .68rem; font-weight: 700; letter-spacing: .1em; margin-bottom: .35rem; }
+  .ar-lbl.a { color: var(--accent2); }
+  .ar-lbl.r { color: var(--accent3); }
+
+  /* ── FITB ── */
+  .fitb-sentence {
+    font-size: .97rem; line-height: 1.9; padding: 1rem;
+    background: var(--surface); border-radius: 8px; margin-bottom: .9rem; font-weight: 500;
+  }
+  .blank-input {
+    border: none; border-bottom: 2px solid var(--accent2);
+    background: transparent; color: var(--accent);
+    font-family: 'Space Mono', monospace; font-size: .9rem;
+    width: 130px; padding: 0 .4rem .15rem; text-align: center;
+    outline: none; transition: border-color .2s;
+  }
+  .blank-input:focus       { border-color: var(--accent); }
+  .blank-input.correct-inp { border-color: var(--success); color: var(--success); }
+  .blank-input.wrong-inp   { border-color: var(--error);   color: var(--error);   }
+
+  /* ── EXPLANATION BOX ── */
+  .explanation {
+    background: rgba(0,245,196,.04); border: 1px solid rgba(0,245,196,.18);
+    border-radius: 8px; padding: 1rem; font-size: .87rem; line-height: 1.75;
+    display: none; animation: fadeUp .3s ease;
+  }
+  .explanation.show { display: block; }
+  .exp-label {
+    font-family: 'Space Mono', monospace; font-size: .68rem; font-weight: 700;
+    letter-spacing: .08em; color: var(--accent); margin-bottom: .5rem;
+  }
+
+  /* ── NUMERICAL SOLUTION CARD ── */
+  .solution-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; transition: border-color .2s;
+  }
+  .solution-card:hover { border-color: var(--accent2); }
+
+  .sol-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem; cursor: pointer; user-select: none; gap: .9rem;
+  }
+  .sol-header:hover { background: rgba(255,255,255,.02); }
+
+  .step-badge {
+    background: linear-gradient(135deg, var(--accent2), #9f5df7);
+    color: #fff; font-size: .68rem; font-family: 'Space Mono', monospace;
+    padding: .2rem .55rem; border-radius: 4px; white-space: nowrap; font-weight: 700;
+  }
+  .sol-title { flex: 1; font-weight: 700; font-size: .92rem; }
+  .subj-tag  { font-size: .7rem; padding: .2rem .55rem; border-radius: 4px; font-family: 'Space Mono', monospace; white-space: nowrap; }
+  .tag-physics   { background: rgba(124,58,237,.2); color: #a78bfa; }
+  .tag-maths     { background: rgba(245,158,11,.2);  color: var(--accent3); }
+  .tag-chemistry { background: rgba(0,245,196,.15);  color: var(--accent); }
+
+  .chevron { color: var(--muted); transition: transform .3s; font-size: 1.1rem; }
+  .solution-card.open .chevron { transform: rotate(180deg); }
+
+  .sol-body { display: none; padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--border); }
+  .solution-card.open .sol-body { display: block; }
+
+  .q-text {
+    color: var(--muted); font-size: .83rem; padding: .7rem 0;
+    font-style: italic; font-family: 'Space Mono', monospace;
+    border-bottom: 1px dashed var(--border); margin-bottom: .9rem;
+  }
+
+  .steps-list { list-style: none; }
+  .step-item  { display: flex; gap: .9rem; margin-bottom: .9rem; align-items: flex-start; }
+  .step-num {
+    min-width: 26px; height: 26px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--accent);
+    color: var(--accent); font-size: .72rem; font-family: 'Space Mono', monospace;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; margin-top: 2px;
+  }
+  .step-text { line-height: 1.7; font-size: .9rem; color: var(--text); }
+  .formula-box {
+    background: var(--surface); border-left: 3px solid var(--accent);
+    padding: .55rem .9rem; margin: .45rem 0; border-radius: 0 6px 6px 0;
+    font-family: 'Space Mono', monospace; font-size: .82rem; color: var(--accent);
+    display: inline-block; width: 100%;
+  }
+  .answer-box {
+    background: linear-gradient(135deg, rgba(0,245,196,.05), rgba(124,58,237,.05));
+    border: 1px solid rgba(0,245,196,.28); padding: .7rem 1rem;
+    border-radius: 8px; margin-top: .9rem; font-family: 'Space Mono', monospace;
+  }
+  .answer-label { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; margin-bottom: .25rem; }
+  .answer-value { color: var(--accent); font-weight: 700; font-size: .97rem; }
+
+  /* ── OUTPUT WRAPPER ── */
+  .output-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
+    animation: fadeUp .4s ease;
+  }
+
+  /* ── SUMMARY / STATS ── */
+  .summary-card {
+    background: var(--card); border: 1px solid rgba(0,245,196,.28);
+    border-radius: 12px; padding: 1.4rem; margin-top: 1rem;
+    position: relative; overflow: hidden;
+  }
+  .summary-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  }
+  .summary-title { font-size: 1rem; font-weight: 800; margin-bottom: .9rem; }
+  .summary-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: .65rem; margin-bottom: 1rem;
+  }
+  .stat-item { background: var(--surface); border-radius: 8px; padding: .8rem; text-align: center; }
+  .stat-num  { font-size: 1.7rem; font-weight: 800; font-family: 'Space Mono', monospace; line-height: 1; margin-bottom: .25rem; }
+  .stat-lbl  { font-size: .68rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .summary-meta { color: var(--text); line-height: 1.8; font-size: .88rem; border-top: 1px solid var(--border); padding-top: .9rem; }
+  .concepts { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .65rem; }
+  .concept-tag {
+    background: rgba(124,58,237,.15); border: 1px solid rgba(124,58,237,.3);
+    color: #a78bfa; padding: .25rem .65rem; border-radius: 50px;
+    font-size: .75rem; font-family: 'Space Mono', monospace;
+  }
+
+  /* ── LOADING / ERROR ── */
+  .loading { display: none; text-align: center; padding: 2.5rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .loading.show { display: block; }
+  .spinner {
+    width: 38px; height: 38px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .8s linear infinite; margin: 0 auto .9rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-msg {
+    background: rgba(248,113,113,.09); border: 1px solid rgba(248,113,113,.28);
+    color: var(--error); padding: .9rem 1rem; border-radius: 8px;
+    font-family: 'Space Mono', monospace; font-size: .83rem;
+    display: none; margin-bottom: 1rem;
+  }
+  .error-msg.show { display: block; }
+
+  /* ── DASHBOARD ── */
+  .dash-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: .9rem; margin-bottom: 1.5rem; animation: fadeUp .5s ease both;
+  }
+  .dash-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.2rem; position: relative; overflow: hidden;
+  }
+  .dash-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .dash-card.green::before  { background: var(--accent); }
+  .dash-card.purple::before { background: var(--accent2); }
+  .dash-card.amber::before  { background: var(--accent3); }
+  .dash-card.red::before    { background: var(--error); }
+  .dash-num  { font-size: 2.4rem; font-weight: 800; font-family: 'Space Mono', monospace; }
+  .dash-lbl  { color: var(--muted); font-size: .75rem; font-family: 'Space Mono', monospace; margin-top: .2rem; }
+  .dash-icon { position: absolute; top: 1rem; right: 1rem; font-size: 1.7rem; opacity: .25; }
+
+  .section-panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; animation: fadeUp .5s ease both;
+  }
+
+  .topic-row { display: flex; align-items: center; gap: .65rem; margin-bottom: .45rem; font-size: .82rem; }
+  .topic-name { min-width: 130px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topic-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 50px; overflow: hidden; }
+  .topic-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 50px; }
+  .topic-count { min-width: 18px; text-align: right; font-family: 'Space Mono', monospace; font-size: .72rem; color: var(--muted); }
+
+  /* ── HISTORY ── */
+  .hist-entry {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: .9rem 1.1rem; margin-bottom: .6rem;
+    display: flex; align-items: center; gap: .9rem; transition: border-color .2s;
+  }
+  .hist-entry:hover { border-color: var(--accent2); }
+  .hist-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+  .hist-icon.numerical { background: rgba(0,245,196,.1); }
+  .hist-icon.mcq       { background: rgba(124,58,237,.1); }
+  .hist-icon.truefalse { background: rgba(245,158,11,.1); }
+  .hist-icon.assertion { background: rgba(248,113,113,.1); }
+  .hist-icon.fillblank { background: rgba(0,245,196,.1); }
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-q    { font-weight: 700; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-meta { color: var(--muted); font-size: .72rem; font-family: 'Space Mono', monospace; margin-top: .18rem; }
+  .hist-badge { font-size: .7rem; font-family: 'Space Mono', monospace; padding: .2rem .6rem; border-radius: 50px; white-space: nowrap; flex-shrink: 0; }
+  .badge-solved   { background: rgba(0,245,196,.12);    color: var(--accent); }
+  .badge-correct  { background: rgba(74,222,128,.12);   color: var(--success); }
+  .badge-wrong    { background: rgba(248,113,113,.12);  color: var(--error); }
+  .badge-partial  { background: rgba(245,158,11,.12);   color: var(--accent3); }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); font-family: 'Space Mono', monospace; font-size: .83rem; }
+  .empty-icon  { font-size: 2.8rem; margin-bottom: .9rem; opacity: .45; }
+
+  footer {
+    text-align: center; padding: 2rem 0 1rem;
+    color: var(--muted); font-size: .75rem; font-family: 'Space Mono', monospace;
+    position: relative; z-index: 1;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 680px) {
+    .mode-grid { grid-template-columns: repeat(3, 1fr); }
+    .input-row { flex-direction: column; }
+    h1 { font-size: 1.9rem; }
+    .tf-row { flex-direction: column; }
+  }
+  @media (max-width: 420px) {
+    .mode-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <div class="nav-brand">⚛ PhysX</div>
+  <button class="nav-tab active"  onclick="goPage('solve')">🧮 Solve</button>
+  <button class="nav-tab"         onclick="goPage('history')">📋 History</button>
+  <button class="nav-tab"         onclick="goPage('dashboard')">📊 Dashboard</button>
+  <div class="nav-right">
+    <span class="session-pill" id="sessionPill" onclick="goPage('dashboard')">0 solved</span>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════
+     PAGE: SOLVE
+═══════════════════════════════ -->
+<div class="page active" id="page-solve">
+<div class="container">
+
+  <header>
+    <div class="logo-badge">⚛ AI Powered</div>
+    <h1>PhysX Solver</h1>
+    <p class="subtitle">Class 10–12 · Physics, Maths &amp; Chemistry</p>
+  </header>
+
+  <!-- Question type selector -->
+  <div class="mode-grid">
+    <div class="mode-card active" id="mode-numerical" onclick="setMode('numerical')">
+      <div class="mode-icon">🔢</div>
+      <div class="mode-title">Numerical</div>
+      <div class="mode-desc">Step-by-step</div>
+    </div>
+    <div class="mode-card" id="mode-mcq" onclick="setMode('mcq')">
+      <div class="mode-icon">🔘</div>
+      <div class="mode-title">MCQ</div>
+      <div class="mode-desc">4 options</div>
+    </div>
+    <div class="mode-card" id="mode-truefalse" onclick="setMode('truefalse')">
+      <div class="mode-icon">✅</div>
+      <div class="mode-title">True / False</div>
+      <div class="mode-desc">With reasoning</div>
+    </div>
+    <div class="mode-card" id="mode-assertion" onclick="setMode('assertion')">
+      <div class="mode-icon">⚖️</div>
+      <div class="mode-title">Assertion–Reason</div>
+      <div class="mode-desc">NEET / JEE</div>
+    </div>
+    <div class="mode-card" id="mode-fillblank" onclick="setMode('fillblank')">
+      <div class="mode-icon">✏️</div>
+      <div class="mode-title">Fill Blank</div>
+      <div class="mode-desc">Complete it</div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-panel">
+    <div class="panel-label">CONFIGURE</div>
+    <div class="input-row">
+      <select id="selSubject">
+        <option value="auto">🔍 Auto-detect</option>
+        <option value="physics">⚛ Physics</option>
+        <option value="maths">📐 Maths</option>
+        <option value="chemistry">🧪 Chemistry</option>
+      </select>
+      <select id="selLevel">
+        <option value="auto">📚 Any level</option>
+        <option value="class10">Class 10</option>
+        <option value="class11">Class 11</option>
+        <option value="class12">Class 12</option>
+        <option value="neet">NEET</option>
+        <option value="jee">JEE</option>
+      </select>
+    </div>
+
+    <div class="chips-label">QUICK EXAMPLES →</div>
+    <div class="chips" id="exChips"></div>
+
+    <textarea id="problemInput" placeholder="Paste your question here..."></textarea>
+
+    <div style="display:flex;gap:.65rem;margin-top:.9rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="solveBtn" onclick="solve()" style="flex:1;">⚡ Solve</button>
+      <button class="btn btn-secondary" onclick="clearSolve()">✕ Clear</button>
+    </div>
+  </div>
+
+  <div class="error-msg" id="solveError"></div>
+  <div class="loading" id="solveLoading"><div class="spinner"></div>Analyzing...</div>
+  <div id="outputArea"></div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE: HISTORY
+═══════════════════════════════ -->
+<div class="page" id="page-history">
+<div class="container">
+  <header>
+    <div class="logo-badge">📋 Session Log</div>
+    <h1>History</h1>
+    <p class="subtitle">Everything you've solved this session</p>
+  </header>
+
+  <div style="display:flex;gap:.6rem;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center;">
+    <button class="btn btn-secondary" id="hf-all"        onclick="showHistory('all')">All</button>
+    <button class="btn btn-secondary" id="hf-numerical"  onclick="showHistory('numerical')">Numerical</button>
+    <button class="btn btn-secondary" id="hf-mcq"        onclick="showHistory('mcq')">MCQ</button>
+    <button class="btn btn-secondary" id="hf-truefalse"  onclick="showHistory('truefalse')">T/F</button>
+    <button class="btn btn-secondary" id="hf-assertion"  onclick="showHistory('assertion')">A–R</button>
+    <button class="btn btn-secondary" id="hf-fillblank"  onclick="showHistory('fillblank')">Fill</button>
+    <button class="btn btn-secondary" onclick="clearHistory()" style="margin-left:auto;color:var(--error);border-color:rgba(248,113,113,.3);">🗑 Clear</button>
+  </div>
+
+  <div id="historyList"></div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════
+     PAGE: DASHBOARD
+═══════════════════════════════ -->
+<div class="page" id="page-dashboard">
+<div class="container">
+  <header>
+    <div class="logo-badge">📊 Analytics</div>
+    <h1>Dashboard</h1>
+    <p class="subtitle">Session performance overview</p>
+  </header>
+  <div class="dash-grid" id="dashGrid"></div>
+  <div class="section-panel" id="topicsPanel" style="display:none;">
+    <div class="panel-label">TOPICS COVERED</div>
+    <div id="topicsChart"></div>
+  </div>
+  <div class="section-panel" id="wrongPanel" style="display:none;">
+    <div class="panel-label">WRONG ANSWERS TO REVIEW</div>
+    <div id="wrongList"></div>
+  </div>
+  <div class="empty-state" id="dashEmpty" style="display:none;">
+    <div class="empty-icon">📊</div>
+    Solve some questions to see your stats here!
+  </div>
+</div>
+</div>
+
+<footer>PhysX Solver v3 • Powered by Gemini AI • For educational use</footer>
+
+<script>
+// ════════════════════════════════════════════════
+//  BACKEND — in-memory session store
+// ════════════════════════════════════════════════
+const Session = {
+  history: [],
+  stats: {
+    totalSolved: 0,
+    correctAnswers: 0,
+    totalInteractive: 0,   // MCQ/TF/AR/FITB answered
+    topicCount: {},
+    typeCount: { numerical:0, mcq:0, truefalse:0, assertion:0, fillblank:0 },
+    wrongAnswers: [],
+  },
+
+  record(type, question, subject, topic, result) {
+    // result: 'solved' | 'correct' | 'wrong' | 'partial'
+    const entry = {
+      id: Date.now() + Math.random(),
+      type, question, subject: subject || 'General',
+      topic: topic || '—', time: new Date(), result
+    };
+    this.history.unshift(entry);
+    this.stats.totalSolved++;
+    this.stats.typeCount[type] = (this.stats.typeCount[type] || 0) + 1;
+    if (topic) this.stats.topicCount[topic] = (this.stats.topicCount[topic] || 0) + 1;
+    this._updatePill();
+    return entry;
+  },
+
+  recordAnswer(correct, questionText, correctAnswer, userAnswer) {
+    this.stats.totalInteractive++;
+    if (correct) this.stats.correctAnswers++;
+    else this.stats.wrongAnswers.push({ q: questionText, correct: correctAnswer, yours: userAnswer });
+    // patch last history entry result
+    if (this.history.length) this.history[0].result = correct ? 'correct' : 'wrong';
+    this._updatePill();
+  },
+
+  _updatePill() {
+    document.getElementById('sessionPill').textContent = `${this.stats.totalSolved} solved`;
+  },
+
+  clear() {
+    this.history = [];
+    this.stats = { totalSolved:0, correctAnswers:0, totalInteractive:0, topicCount:{}, typeCount:{numerical:0,mcq:0,truefalse:0,assertion:0,fillblank:0}, wrongAnswers:[] };
+    this._updatePill();
+  }
+};
+
+// ════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const idx = {solve:0, history:1, dashboard:2};
+  document.querySelectorAll('.nav-tab')[idx[id]]?.classList.add('active');
+  if (id === 'history')   renderHistory('all');
+  if (id === 'dashboard') renderDashboard();
+}
+
+// ════════════════════════════════════════════════
+//  SOLVE PAGE
+// ════════════════════════════════════════════════
+let mode = 'numerical';
+let answered = false;
+let pendingSubject = '', pendingTopic = '', pendingQuestion = '';
+
+const EXAMPLES = {
+  numerical: [
+    ['Projectile', 'A ball thrown vertically upward with v = 20 m/s. Find max height.'],
+    ['Differentiation', 'Find the derivative of f(x) = x³ + 2x² − 5x + 3'],
+    ['Parallel circuit', '4Ω and 6Ω in parallel. Find equivalent resistance.'],
+    ['Quadratic', 'Solve: 2x² − 7x + 3 = 0'],
+    ['Coulomb', 'Force between 2μC and 3μC charges 0.1 m apart?'],
+    ['Integration', '∫(3x² + 2x) dx'],
+  ],
+  mcq: [
+    ['Newton\'s law', 'Which Newton\'s law explains rocket propulsion?\n(A) First (B) Second (C) Third (D) All three'],
+    ['Ohm\'s law', 'A 10Ω resistor has 5V across it. Current is?\n(A) 0.5A (B) 2A (C) 50A (D) 0.2A'],
+    ['Quadratic roots', 'Roots of x² − 5x + 6 = 0?\n(A) 2,3 (B) 1,6 (C) −2,−3 (D) 3,4'],
+  ],
+  truefalse: [
+    ['Inertia', 'A body at rest has zero inertia. True or False?'],
+    ['Derivative', 'The derivative of sin(x) is cos(x). True or False?'],
+    ['Light speed', 'Light travels faster in water than in vacuum. True or False?'],
+  ],
+  assertion: [
+    ['Newton A-R', 'Assertion (A): A body continues in uniform motion unless acted on by a net external force.\nReason (R): Every body resists changes to its state of motion.'],
+    ['Integration', 'Assertion (A): ∫sin(x)dx = −cos(x) + C\nReason (R): The antiderivative of sin(x) is −cos(x).'],
+  ],
+  fillblank: [
+    ['Gravity', 'The acceleration due to gravity on Earth is approximately _____ m/s².'],
+    ['Derivative', 'If f(x) = x², then f\'(x) = _____.'],
+    ['Ohm\'s law', 'Ohm\'s law states that V = _____.'],
+  ],
+};
+
+const PLACEHOLDERS = {
+  numerical: 'Type a numerical or theory question...\n\nE.g. A car accelerates from 0 to 60 km/h in 10 s. Find acceleration.',
+  mcq:       'Paste an MCQ with options A, B, C, D...\n\nE.g. Which law explains rocket propulsion?\n(A) First (B) Second (C) Third (D) None',
+  truefalse: 'Paste a True/False statement...\n\nE.g. The speed of light in vacuum is 3 × 10⁸ m/s. True or False?',
+  assertion: 'Paste Assertion and Reason...\n\nAssertion (A): ...\nReason (R): ...',
+  fillblank: 'Paste a fill-in-the-blank...\n\nE.g. The SI unit of force is ___.',
+};
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('mode-' + m).classList.add('active');
+  document.getElementById('problemInput').value = '';
+  document.getElementById('problemInput').placeholder = PLACEHOLDERS[m];
+  document.getElementById('outputArea').innerHTML = '';
+  hideError();
+  buildChips();
+}
+
+function buildChips() {
+  document.getElementById('exChips').innerHTML = (EXAMPLES[mode] || [])
+    .map(([label, txt]) => `<span class="chip" onclick='fillExample(${JSON.stringify(txt)})'>${label}</span>`)
+    .join('');
+}
+
+function fillExample(t) { document.getElementById('problemInput').value = t; }
+
+function clearSolve() {
+  document.getElementById('problemInput').value = '';
+  document.getElementById('outputArea').innerHTML = '';
+  hideError();
+}
+
+async function solve() {
+  const problem = document.getElementById('problemInput').value.trim();
+  if (!problem) { showError('Please enter a question first!'); return; }
+
+  const subject = document.getElementById('selSubject').value;
+  const level   = document.getElementById('selLevel').value;
+  const ctx = `${subject !== 'auto' ? 'Subject: ' + subject + '\n' : ''}${level !== 'auto' ? 'Level: ' + level + '\n' : ''}`;
+
+  answered = false;
+  setLoading(true);
+  hideError();
+  document.getElementById('outputArea').innerHTML = '';
+
+  try {
+    if      (mode === 'numerical') await doNumerical(problem, ctx);
+    else if (mode === 'mcq')       await doMCQ(problem, ctx);
+    else if (mode === 'truefalse') await doTF(problem, ctx);
+    else if (mode === 'assertion') await doAR(problem, ctx);
+    else if (mode === 'fillblank') await doFITB(problem, ctx);
+  } catch(e) {
+    showError('Error: ' + (e.message || 'Something went wrong. Check console.'));
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── NUMERICAL ──────────────────────────────
+async function doNumerical(problem, ctx) {
+  const sys = `You are an expert Class 10-12 Physics, Maths and Chemistry teacher.
+Solve step-by-step in simple language. Respond ONLY with valid JSON:
+{
+  "subject":"Physics"|"Maths"|"Chemistry",
+  "topic":"brief topic name",
+  "difficulty":"Class 10"|"Class 11"|"Class 12"|"NEET"|"JEE",
+  "question":"restated question",
+  "steps":[{"title":"short title","content":"explanation","formula":"formula string or null"}],
+  "answer":"final answer with units",
+  "keyConcepts":["c1","c2"],
+  "tip":"one-line exam tip"
+}
+Max 6 steps. Show all substitutions.`;
+
+  const data = await apiJSON(sys, ctx + 'Problem: ' + problem);
+  Session.record('numerical', problem, data.subject, data.topic, 'solved');
+  renderNumerical(data, problem);
+}
+
+function renderNumerical(d, problem) {
+  const tc = subjectTagClass(d.subject);
+  const ti = subjectTagIcon(d.subject);
+  const stepsHTML = (d.steps||[]).map((s,i) => `
+    <li class="step-item">
+      <div class="step-num">${i+1}</div>
+      <div class="step-text"><strong>${s.title}</strong><br>${s.content}
+        ${s.formula ? `<div class="formula-box">📌 ${s.formula}</div>` : ''}
+      </div>
+    </li>`).join('');
+  const conceptsHTML = (d.keyConcepts||[]).map(c=>`<span class="concept-tag">${c}</span>`).join('');
+
+  document.getElementById('outputArea').innerHTML = `
+    <div class="solution-card open">
+      <div class="sol-header" onclick="toggleCard(this.parentElement)">
+        <span class="step-badge">${d.difficulty||'Class 11'}</span>
+        <span class="sol-title">${d.topic||d.subject||'Solution'}</span>
+        <span class="subj-tag ${tc}">${ti} ${d.subject||'Science'}</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="sol-body">
+        <div class="q-text">❝ ${d.question||problem} ❞</div>
+        <ul class="steps-list">${stepsHTML}</ul>
+        <div class="answer-box">
+          <div class="answer-label">✅ Final Answer</div>
+          <div class="answer-value">${d.answer}</div>
+        </div>
+        ${d.tip ? `<div style="margin-top:.7rem;color:#94a3b8;font-size:.8rem;font-family:'Space Mono',monospace;">💡 Exam Tip: ${d.tip}</div>` : ''}
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-title">📊 Solution Summary</div>
+      <div class="summary-stats">
+        <div class="stat-item"><div class="stat-num" style="color:var(--accent)">${(d.steps||[]).length}</div><div class="stat-lbl">Steps</div></div>
+        <div class="stat-item"><div class="stat-num" style="color:var(--accent2)">${(d.keyConcepts||[]).length}</div><div class="stat-lbl">Concepts</div></div>
+        <div class="stat-item"><div class="stat-num" style="color:var(--accent3)">${(d.difficulty||'').replace('Class ','') || '—'}</div><div class="stat-lbl">Level</div></div>
+      </div>
+      <div class="summary-meta">
+        <strong>Subject:</strong> ${d.subject||'—'} &nbsp;|&nbsp; <strong>Topic:</strong> ${d.topic||'—'}
+        <div class="concepts">${conceptsHTML}</div>
+        ${d.tip ? `<br><strong>Remember:</strong> ${d.tip}` : ''}
+      </div>
+    </div>`;
+}
+
+// ── MCQ ────────────────────────────────────
+let _mcq = null;
+async function doMCQ(problem, ctx) {
+  const sys = `You are an expert teacher. Analyze or create an MCQ with 4 options.
+Respond ONLY with valid JSON:
+{
+  "subject":"Physics"|"Maths"|"Chemistry",
+  "topic":"brief topic",
+  "difficulty":"Class X",
+  "question":"question text only (no options)",
+  "options":["option A","option B","option C","option D"],
+  "correctIndex":0,
+  "explanation":"why the correct answer is right",
+  "wrongExplanations":["why A","why B","why C","why D"],
+  "tip":"exam tip"
+}
+correctIndex is 0-based (0=A, 1=B, 2=C, 3=D).`;
+
+  const data = await apiJSON(sys, ctx + 'MCQ: ' + problem);
+  _mcq = data;
+  Session.record('mcq', problem, data.subject, data.topic, 'pending');
+  renderMCQ(data);
+}
+
+function renderMCQ(d) {
+  const keys = ['A','B','C','D'];
+  document.getElementById('outputArea').innerHTML = `
+    <div class="output-card">
+      <div class="q-type-badge q-type-mcq">🔘 MCQ</div>
+      <div class="question-display">${d.question}</div>
+      <div class="mcq-options">
+        ${d.options.map((o,i)=>`
+          <div class="mcq-option" id="mopt${i}" onclick="answerMCQ(${i})">
+            <div class="option-key">${keys[i]}</div><div>${o}</div>
+          </div>`).join('')}
+      </div>
+      <div class="explanation" id="mcqExp">
+        <div class="exp-label">💡 EXPLANATION</div>
+        <div id="mcqExpBody"></div>
+        ${d.tip ? `<div style="margin-top:.65rem;color:#94a3b8;font-size:.78rem;font-family:'Space Mono',monospace;">💡 Tip: ${d.tip}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function answerMCQ(idx) {
+  if (answered) return;
+  answered = true;
+  const d = _mcq;
+  const keys = ['A','B','C','D'];
+  const isCorrect = idx === d.correctIndex;
+  for (let i=0;i<4;i++) {
+    const el = document.getElementById('mopt'+i);
+    el.classList.add('disabled');
+    if (i === d.correctIndex) el.classList.add(i===idx ? 'correct' : 'reveal-correct');
+    else if (i === idx)       el.classList.add('wrong');
+  }
+  Session.recordAnswer(isCorrect, d.question, `${keys[d.correctIndex]}. ${d.options[d.correctIndex]}`, `${keys[idx]}. ${d.options[idx]}`);
+  document.getElementById('mcqExpBody').innerHTML =
+    `<strong style="color:var(--accent)">Correct: ${keys[d.correctIndex]}. ${d.options[d.correctIndex]}</strong><br><br>${d.explanation}`;
+  document.getElementById('mcqExp').classList.add('show');
+}
+
+// ── TRUE / FALSE ───────────────────────────
+let _tf = null;
+async function doTF(problem, ctx) {
+  const sys = `You are an expert teacher. Evaluate a True/False statement.
+Respond ONLY with valid JSON:
+{
+  "subject":"Physics"|"Maths"|"Chemistry",
+  "topic":"brief topic",
+  "difficulty":"Class X",
+  "statement":"the exact statement",
+  "answer":true|false,
+  "explanation":"full reasoning",
+  "correction":"corrected statement if false, empty string if true",
+  "tip":"exam tip"
+}`;
+
+  const data = await apiJSON(sys, ctx + 'True/False: ' + problem);
+  _tf = data;
+  Session.record('truefalse', problem, data.subject, data.topic, 'pending');
+  renderTF(data);
+}
+
+function renderTF(d) {
+  document.getElementById('outputArea').innerHTML = `
+    <div class="output-card">
+      <div class="q-type-badge q-type-tf">✅ TRUE / FALSE</div>
+      <div class="question-display">${d.statement}</div>
+      <div class="tf-row">
+        <button class="tf-btn true-btn"  id="tfTrue"  onclick="answerTF(true)">✅ TRUE</button>
+        <button class="tf-btn false-btn" id="tfFalse" onclick="answerTF(false)">❌ FALSE</button>
+      </div>
+      <div class="explanation" id="tfExp">
+        <div class="exp-label">💡 EXPLANATION</div>
+        <div id="tfExpBody"></div>
+        ${d.tip ? `<div style="margin-top:.65rem;color:#94a3b8;font-size:.78rem;font-family:'Space Mono',monospace;">💡 Tip: ${d.tip}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function answerTF(choice) {
+  if (answered) return;
+  answered = true;
+  const d = _tf;
+  const correct = d.answer;
+  const isCorrect = choice === correct;
+  const tEl = document.getElementById('tfTrue');
+  const fEl = document.getElementById('tfFalse');
+  tEl.classList.add('disabled'); fEl.classList.add('disabled');
+  if (isCorrect) {
+    (choice ? tEl : fEl).classList.add('correct');
+  } else {
+    (choice ? tEl : fEl).classList.add('wrong');
+    (!choice ? tEl : fEl).classList.add('correct');
+  }
+  Session.recordAnswer(isCorrect, d.statement, correct ? 'TRUE' : 'FALSE', choice ? 'TRUE' : 'FALSE');
+  document.getElementById('tfExpBody').innerHTML =
+    `<strong style="color:var(--accent)">Answer: ${correct ? 'TRUE ✅' : 'FALSE ❌'}</strong><br><br>${d.explanation}` +
+    (d.correction ? `<br><br><strong>Correction:</strong> ${d.correction}` : '');
+  document.getElementById('tfExp').classList.add('show');
+}
+
+// ── ASSERTION–REASON ───────────────────────
+let _ar = null;
+async function doAR(problem, ctx) {
+  const sys = `You are an expert NEET/JEE teacher. Analyze Assertion-Reason questions.
+Respond ONLY with valid JSON:
+{
+  "subject":"Physics"|"Maths"|"Chemistry",
+  "topic":"brief topic",
+  "difficulty":"Class X"|"NEET"|"JEE",
+  "assertion":"Assertion statement",
+  "reason":"Reason statement",
+  "options":[
+    "Both A and R are true, and R is the correct explanation of A",
+    "Both A and R are true, but R is NOT the correct explanation of A",
+    "A is true but R is false",
+    "A is false but R is true"
+  ],
+  "correctIndex":0,
+  "explanation":"full explanation",
+  "tip":"exam tip"
+}`;
+
+  const data = await apiJSON(sys, ctx + 'Assertion-Reason:\n' + problem);
+  _ar = data;
+  Session.record('assertion', problem, data.subject, data.topic, 'pending');
+  renderAR(data);
+}
+
+function renderAR(d) {
+  const keys = ['A','B','C','D'];
+  document.getElementById('outputArea').innerHTML = `
+    <div class="output-card">
+      <div class="q-type-badge q-type-ar">⚖️ ASSERTION–REASON</div>
+      <div class="ar-stmts">
+        <div class="ar-stmt"><div class="ar-lbl a">ASSERTION (A)</div>${d.assertion}</div>
+        <div class="ar-stmt"><div class="ar-lbl r">REASON (R)</div>${d.reason}</div>
+      </div>
+      <div class="mcq-options">
+        ${d.options.map((o,i)=>`
+          <div class="mcq-option" id="aopt${i}" onclick="answerAR(${i})">
+            <div class="option-key">${keys[i]}</div><div>${o}</div>
+          </div>`).join('')}
+      </div>
+      <div class="explanation" id="arExp">
+        <div class="exp-label">💡 EXPLANATION</div>
+        <div id="arExpBody"></div>
+        ${d.tip ? `<div style="margin-top:.65rem;color:#94a3b8;font-size:.78rem;font-family:'Space Mono',monospace;">💡 Tip: ${d.tip}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function answerAR(idx) {
+  if (answered) return;
+  answered = true;
+  const d = _ar;
+  const keys = ['A','B','C','D'];
+  const isCorrect = idx === d.correctIndex;
+  for (let i=0;i<4;i++) {
+    const el = document.getElementById('aopt'+i);
+    el.classList.add('disabled');
+    if (i === d.correctIndex) el.classList.add(i===idx ? 'correct' : 'reveal-correct');
+    else if (i === idx)       el.classList.add('wrong');
+  }
+  Session.recordAnswer(isCorrect, `A: ${d.assertion}`, `Option ${keys[d.correctIndex]}`, `Option ${keys[idx]}`);
+  document.getElementById('arExpBody').innerHTML =
+    `<strong style="color:var(--accent)">Correct: Option ${keys[d.correctIndex]}</strong><br><br>${d.explanation}`;
+  document.getElementById('arExp').classList.add('show');
+}
+
+// ── FILL IN THE BLANK ──────────────────────
+let _fitb = null;
+async function doFITB(problem, ctx) {
+  const sys = `You are an expert teacher. Handle fill-in-the-blank questions.
+Respond ONLY with valid JSON:
+{
+  "subject":"Physics"|"Maths"|"Chemistry",
+  "topic":"brief topic",
+  "difficulty":"Class X",
+  "sentence":"sentence with _____ for each blank",
+  "blanks":["answer1","answer2"],
+  "explanation":"why these are the correct answers",
+  "tip":"exam tip"
+}
+If multiple blanks, list answers in order. Each blank in sentence is represented as _____.`;
+
+  const data = await apiJSON(sys, ctx + 'Fill in the blank: ' + problem);
+  _fitb = data;
+  Session.record('fillblank', problem, data.subject, data.topic, 'pending');
+  renderFITB(data);
+}
+
+function renderFITB(d) {
+  let bi = 0;
+  const sentHTML = d.sentence.replace(/_+/g, () => {
+    const i = bi++;
+    return `<input type="text" class="blank-input" id="bl${i}" placeholder="?" autocomplete="off" spellcheck="false">`;
+  });
+  document.getElementById('outputArea').innerHTML = `
+    <div class="output-card">
+      <div class="q-type-badge q-type-fitb">✏️ FILL IN THE BLANK</div>
+      <div class="fitb-sentence">${sentHTML}</div>
+      <button class="btn btn-primary" onclick="checkFITB()" style="width:100%;">✓ Check Answer</button>
+      <div class="explanation" id="fitbExp" style="margin-top:.9rem;">
+        <div class="exp-label">💡 EXPLANATION</div>
+        <div id="fitbExpBody"></div>
+        ${d.tip ? `<div style="margin-top:.65rem;color:#94a3b8;font-size:.78rem;font-family:'Space Mono',monospace;">💡 Tip: ${d.tip}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function checkFITB() {
+  if (answered) return;
+  answered = true;
+  const d = _fitb;
+  let allCorrect = true;
+  let html = '<strong style="color:var(--accent)">Correct Answers:</strong><br>';
+  (d.blanks||[]).forEach((ans, i) => {
+    const inp = document.getElementById('bl'+i);
+    if (!inp) return;
+    inp.disabled = true;
+    const user = inp.value.trim().toLowerCase().replace(/\s+/g,'');
+    const expected = ans.toLowerCase().replace(/\s+/g,'');
+    const ok = user === expected || user.replace(/[^a-z0-9.×]/g,'') === expected.replace(/[^a-z0-9.×]/g,'');
+    inp.classList.add(ok ? 'correct-inp' : 'wrong-inp');
+    if (!ok) { inp.value = ans; allCorrect = false; }
+    html += `Blank ${i+1}: <strong>${ans}</strong><br>`;
+  });
+  Session.recordAnswer(allCorrect, d.sentence, (d.blanks||[]).join(', '), allCorrect ? 'Correct' : 'Incorrect');
+  document.getElementById('fitbExpBody').innerHTML = html + '<br>' + d.explanation;
+  document.getElementById('fitbExp').classList.add('show');
+}
+
+// ════════════════════════════════════════════════
+//  HISTORY PAGE
+// ════════════════════════════════════════════════
+const TYPE_ICONS = { numerical:'🔢', mcq:'🔘', truefalse:'✅', assertion:'⚖️', fillblank:'✏️' };
+const TYPE_LABELS = { numerical:'Numerical', mcq:'MCQ', truefalse:'True/False', assertion:'A–R', fillblank:'Fill Blank' };
+const RESULT_BADGE = {
+  solved:  ['badge-solved',  'Solved'],
+  correct: ['badge-correct', '✓ Correct'],
+  wrong:   ['badge-wrong',   '✗ Wrong'],
+  partial: ['badge-partial', 'Partial'],
+  pending: ['badge-partial', 'Pending'],
+};
+
+function showHistory(filter) {
+  document.querySelectorAll('[id^="hf-"]').forEach(b => { b.style.color=''; b.style.borderColor=''; });
+  const btn = document.getElementById('hf-' + filter);
+  if (btn) { btn.style.color = 'var(--accent)'; btn.style.borderColor = 'var(--accent)'; }
+  renderHistory(filter);
+}
+
+function renderHistory(filter) {
+  const entries = filter === 'all'
+    ? Session.history
+    : Session.history.filter(e => e.type === filter);
+
+  const list = document.getElementById('historyList');
+  if (!entries.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>Nothing here yet. Solve some questions!</div>`;
+    return;
+  }
+  list.innerHTML = entries.map(e => {
+    const timeStr = e.time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const [bc, bl] = RESULT_BADGE[e.result] || RESULT_BADGE.solved;
+    return `
+      <div class="hist-entry">
+        <div class="hist-icon ${e.type}">${TYPE_ICONS[e.type]||'📄'}</div>
+        <div class="hist-info">
+          <div class="hist-q">${e.question}</div>
+          <div class="hist-meta">${TYPE_LABELS[e.type]||'—'} · ${e.subject} · ${e.topic} · ${timeStr}</div>
+        </div>
+        <span class="hist-badge ${bc}">${bl}</span>
+      </div>`;
+  }).join('');
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history and reset session stats?')) return;
+  Session.clear();
+  renderHistory('all');
+}
+
+// ════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════
+function renderDashboard() {
+  const s = Session.stats;
+  const acc = s.totalInteractive > 0 ? Math.round((s.correctAnswers / s.totalInteractive) * 100) : null;
+  const topics = Object.entries(s.topicCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxC = topics.length ? topics[0][1] : 1;
+  const isEmpty = s.totalSolved === 0;
+
+  document.getElementById('dashEmpty').style.display = isEmpty ? 'block' : 'none';
+
+  document.getElementById('dashGrid').innerHTML = `
+    <div class="dash-card green">
+      <div class="dash-icon">🧮</div>
+      <div class="dash-num" style="color:var(--accent)">${s.totalSolved}</div>
+      <div class="dash-lbl">Problems Solved</div>
+    </div>
+    <div class="dash-card purple">
+      <div class="dash-icon">✅</div>
+      <div class="dash-num" style="color:var(--accent2)">${s.correctAnswers}</div>
+      <div class="dash-lbl">Correct Answers</div>
+    </div>
+    <div class="dash-card amber">
+      <div class="dash-icon">📊</div>
+      <div class="dash-num" style="color:var(--accent3)">${acc !== null ? acc + '%' : '—'}</div>
+      <div class="dash-lbl">Accuracy</div>
+    </div>
+    <div class="dash-card red">
+      <div class="dash-icon">📖</div>
+      <div class="dash-num" style="color:var(--error)">${s.wrongAnswers.length}</div>
+      <div class="dash-lbl">To Review</div>
+    </div>`;
+
+  // topics bar chart
+  const topicsPanel = document.getElementById('topicsPanel');
+  if (topics.length) {
+    topicsPanel.style.display = 'block';
+    document.getElementById('topicsChart').innerHTML = topics.map(([name, count]) => `
+      <div class="topic-row">
+        <div class="topic-name">${name}</div>
+        <div class="topic-bar-wrap"><div class="topic-bar-fill" style="width:${Math.round(count/maxC*100)}%"></div></div>
+        <div class="topic-count">${count}</div>
+      </div>`).join('');
+  } else {
+    topicsPanel.style.display = 'none';
+  }
+
+  // wrong answers
+  const wrongPanel = document.getElementById('wrongPanel');
+  if (s.wrongAnswers.length) {
+    wrongPanel.style.display = 'block';
+    document.getElementById('wrongList').innerHTML = s.wrongAnswers.slice(0,10).map((w,i) => `
+      <div style="background:var(--surface);border-radius:8px;padding:.75rem 1rem;margin-bottom:.5rem;font-size:.85rem;border-left:3px solid var(--error);">
+        <div style="font-weight:700;margin-bottom:.3rem;">${w.q}</div>
+        <div style="color:var(--success);font-size:.8rem;">✅ ${w.correct}</div>
+        <div style="color:var(--error);font-size:.8rem;">❌ ${w.yours}</div>
+      </div>`).join('');
+  } else {
+    wrongPanel.style.display = 'none';
+  }
+}
+
+// ════════════════════════════════════════════════
+//  CLAUDE API
+// ════════════════════════════════════════════════
+async function apiJSON(system, userMsg) {
+  let response;
+  try {
+    response = await fetch("/api/solve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system, userMsg }),
+    });
+  } catch (netErr) {
+    throw new Error("Network error — are you connected to the internet?");
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch (_) {
+    throw new Error(`Server returned invalid JSON (HTTP ${response.status})`);
+  }
+  if (!response.ok) {
+    throw new Error(data?.error || `Server error ${response.status}`);
+  }
+  if (typeof data.text !== "string" || !data.text.trim()) {
+    throw new Error("Empty response from AI. Please try again.");
+  }
+  return data.text;
+}
+
+// ════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════
+function toggleCard(card) { card.classList.toggle('open'); }
+
+function setLoading(on) {
+  document.getElementById('solveLoading').classList.toggle('show', on);
+  const btn = document.getElementById('solveBtn');
+  btn.disabled = on;
+  btn.textContent = on ? '⏳ Solving...' : '⚡ Solve';
+}
+
+function showError(msg) {  const el = document.getElementById('solveError');
+  el.textContent = msg; el.classList.add('show');
+}
+function hideError() { document.getElementById('solveError').classList.remove('show'); }
+
+function subjectTagClass(s='') {
+  const l = s.toLowerCase();
+  if (l.includes('math')) return 'tag-maths';
+  if (l.includes('chem')) return 'tag-chemistry';
+  return 'tag-physics';
+}
+function subjectTagIcon(s='') {
+  const l = s.toLowerCase();
+  if (l.includes('math')) return '📐';
+  if (l.includes('chem')) return '🧪';
+  return '⚛';
+}
+
+// ── INIT ──
+setMode('numerical');
+showHistory('all');
+</script>
+</body>
+</html>

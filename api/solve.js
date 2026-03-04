@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
   // ── Call Gemini ───────────────────────────────────────────────────
   const GEMINI_URL =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   let geminiResponse;
   try {
@@ -56,9 +56,6 @@ export default async function handler(req, res) {
         generationConfig: {
           temperature: 0.3,
           maxOutputTokens: 2048,
-          // Ask Gemini to respond as plain JSON when the system prompt
-          // requests it — this is a best-effort hint.
-          responseMimeType: "application/json",
         },
         // Safety: keep defaults (don't block STEM content)
         safetySettings: [

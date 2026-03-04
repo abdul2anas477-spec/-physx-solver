@@ -1,7 +1,7 @@
 // api/solve.js — PhysX Solver backend
-// Deployed as a Vercel Serverless Function at /api/solve
+// Uses Groq API (FREE, high rate limits) with llama-3.3-70b-versatile
 // Expects: POST { system: string, userMsg: string }
-// Returns: { text: string }  (parsed JSON string from Gemini)
+// Returns: { text: string }
 
 export default async function handler(req, res) {
   // ── CORS ──────────────────────────────────────────────────────────
@@ -9,10 +9,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Pre-flight OPTIONS request
   if (req.method === "OPTIONS") return res.status(200).end();
-
-  // Only POST allowed
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
@@ -27,99 +24,69 @@ export default async function handler(req, res) {
   }
 
   // ── API key ───────────────────────────────────────────────────────
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    console.error("[PhysX] GEMINI_API_KEY environment variable is not set.");
-    return res.status(500).json({ error: "Server configuration error: API key not set." });
+    console.error("[PhysX] GROQ_API_KEY environment variable is not set.");
+    return res.status(500).json({ error: "Server configuration error: GROQ_API_KEY not set." });
   }
 
-  // ── Call Gemini ───────────────────────────────────────────────────
-  const GEMINI_URL =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-  let geminiResponse;
+  // ── Call Groq ─────────────────────────────────────────────────────
+  let groqResponse;
   try {
-    geminiResponse = await fetch(GEMINI_URL, {
+    groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              // Send system prompt + user message as a single turn.
-              // Gemini 1.5 Flash supports a system_instruction field but
-              // this approach keeps parity with the original chat.js design.
-              { text: `${system}\n\n${userMsg}` },
-            ],
-          },
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: system },
+          { role: "user",   content: userMsg },
         ],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 2048,
-        },
-        // Safety: keep defaults (don't block STEM content)
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
-        ],
+        temperature: 0.3,
+        max_tokens: 2048,
       }),
     });
   } catch (networkErr) {
-    console.error("[PhysX] Network error reaching Gemini:", networkErr.message);
-    return res.status(502).json({ error: "Could not reach Gemini API. Check server connectivity." });
+    console.error("[PhysX] Network error reaching Groq:", networkErr.message);
+    return res.status(502).json({ error: "Could not reach Groq API. Check server connectivity." });
   }
 
-  // ── Handle non-OK Gemini responses ───────────────────────────────
-  if (!geminiResponse.ok) {
+  // ── Handle non-OK responses ───────────────────────────────────────
+  if (!groqResponse.ok) {
     let errBody = {};
-    try { errBody = await geminiResponse.json(); } catch (_) {}
-    const status  = geminiResponse.status;
-    const message = errBody?.error?.message || `Gemini returned HTTP ${status}`;
-    console.error(`[PhysX] Gemini error ${status}:`, message);
+    try { errBody = await groqResponse.json(); } catch (_) {}
+    const status  = groqResponse.status;
+    const message = errBody?.error?.message || `Groq returned HTTP ${status}`;
+    console.error(`[PhysX] Groq error ${status}:`, message);
 
-    // Surface quota / auth errors clearly
     if (status === 429) return res.status(429).json({ error: "Rate limit reached. Please wait a moment." });
-    if (status === 400) return res.status(400).json({ error: `Bad request to Gemini: ${message}` });
-    if (status === 403) return res.status(403).json({ error: "Gemini API key is invalid or lacks permission." });
+    if (status === 401) return res.status(401).json({ error: "Groq API key is invalid." });
+    if (status === 400) return res.status(400).json({ error: `Bad request: ${message}` });
     return res.status(502).json({ error: message });
   }
 
-  // ── Parse Gemini payload ──────────────────────────────────────────
-  let geminiData;
+  // ── Parse response ────────────────────────────────────────────────
+  let groqData;
   try {
-    geminiData = await geminiResponse.json();
+    groqData = await groqResponse.json();
   } catch (parseErr) {
-    console.error("[PhysX] Failed to parse Gemini JSON:", parseErr.message);
-    return res.status(502).json({ error: "Unexpected response format from Gemini." });
+    console.error("[PhysX] Failed to parse Groq JSON:", parseErr.message);
+    return res.status(502).json({ error: "Unexpected response format from Groq." });
   }
 
-  // Check for blocked / empty candidates
-  const candidate = geminiData?.candidates?.[0];
-  if (!candidate) {
-    const blockReason = geminiData?.promptFeedback?.blockReason;
-    if (blockReason) {
-      return res.status(422).json({ error: `Content blocked by Gemini safety filters: ${blockReason}` });
-    }
-    return res.status(502).json({ error: "Gemini returned no candidates." });
-  }
-
-  // Extract text from the first part
-  const rawText = candidate?.content?.parts?.[0]?.text ?? "";
+  const rawText = groqData?.choices?.[0]?.message?.content ?? "";
   if (!rawText) {
-    return res.status(502).json({ error: "Gemini returned an empty response." });
+    return res.status(502).json({ error: "Groq returned an empty response." });
   }
 
-  // Strip optional markdown code fences (```json ... ```)
+  // Strip optional markdown code fences
   const cleanText = rawText
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
 
-  // ── Return as { text: "<JSON string>" } ──────────────────────────
-  // The frontend calls apiJSON() which reads `data.text` and then
-  // JSON.parses it per-mode handler. We return the cleaned string so
-  // the frontend's existing parsing logic works without any changes.
   return res.status(200).json({ text: cleanText });
 }

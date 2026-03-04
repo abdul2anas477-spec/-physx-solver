@@ -1242,7 +1242,13 @@ async function apiJSON(system, userMsg) {
   if (typeof data.text !== "string" || !data.text.trim()) {
     throw new Error("Empty response from AI. Please try again.");
   }
-  return data.text;
+  // Parse the JSON string returned by the backend into an object
+  try {
+    return JSON.parse(data.text);
+  } catch (e) {
+    console.error("Failed to parse AI response as JSON:", data.text);
+    throw new Error("AI returned an unexpected response format. Please try again.");
+  }
 }
 
 // ════════════════════════════════════════════════

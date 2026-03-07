@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PhysX Solver — Class 10-12</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -1595,7 +1602,10 @@ function scanRenderResult(text, subj) {
     }
   });
   html += '</div>';
-  document.getElementById('scanOutput').innerHTML = html;
+  const out = document.getElementById('scanOutput');
+  out.innerHTML = html;
+  // Render LaTeX math if MathJax is loaded
+  if (window.MathJax) MathJax.typesetPromise([out]).catch(e => console.warn('MathJax:', e));
 }
 
 function scanClearOutput() { document.getElementById('scanOutput').innerHTML = ''; }

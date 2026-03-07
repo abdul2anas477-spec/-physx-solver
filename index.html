@@ -1535,29 +1535,38 @@ async function scanSolve() {
   const typeMap = { numerical:'numerical', mcq:'MCQ', truefalse:'True/False', assertion:'Assertion-Reason', fillblank:'Fill in the blank', auto:'any type' };
 
   const shortPrompt = `You are an expert ${subjMap[subj]} teacher (Class 10-12 NEET/JEE).
-Look at this image. It has a ${typeMap[type]} question.
-Reply in this EXACT format:
+Read the question in this image carefully and solve it completely.
+Reply in plain text using this EXACT format (no LaTeX, no markdown, use simple text math):
+
 📋 QUESTION:
-[One-line summary of the question]
+[Write the question in plain text]
+
 ✅ ANSWER:
-[Final answer only]
-💡 FORMULA/CONCEPT:
-[Key formula or concept — one line]
-Keep it under 6 lines. No long working.`;
+[Final answer with value and units]
+
+💡 FORMULA USED:
+[Key formula in plain text]`;
 
   const longPrompt = `You are an expert ${subjMap[subj]} teacher (Class 10-12 NEET/JEE).
-Look at this image carefully. It has a ${typeMap[type]} question.
-Reply in this EXACT format:
-📋 QUESTION DETECTED:
-[Full question text]
+Read the question in this image carefully and solve it completely.
+Reply in plain text using this EXACT format (no LaTeX, no markdown, use simple text math like x^2, sqrt(x), integral):
+
+📋 QUESTION:
+[Write the full question in plain text]
+
 📚 SUBJECT & TOPIC:
-[Subject and topic]
+[Subject and topic name]
+
 🔢 STEP-BY-STEP SOLUTION:
-[Number every step. Show all working and substitutions.]
+1. [First step]
+2. [Second step]
+3. [Continue all steps until final answer]
+
 ✅ FINAL ANSWER:
-[Clear final answer]
+[Clear final answer with value and units]
+
 💡 KEY CONCEPT:
-[2-3 sentence concept explanation]`;
+[Explain the concept in 2 sentences]`;
 
   const prompt = scanMode === 'short' ? shortPrompt : longPrompt;
 

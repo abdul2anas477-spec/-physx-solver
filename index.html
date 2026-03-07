@@ -464,6 +464,62 @@
     position: relative; z-index: 1;
   }
 
+  /* ── IMAGE SCANNER ── */
+  .scan-mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1.25rem; }
+  .scan-mode-btn {
+    padding: 1rem .75rem; background: var(--card); border: 2px solid var(--border);
+    border-radius: 12px; color: var(--muted); font-family: 'Syne', sans-serif;
+    font-size: .88rem; font-weight: 700; cursor: pointer; transition: all .2s;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  }
+  .scan-mode-btn span { font-size: .65rem; font-weight: 400; color: var(--muted); font-family: 'Space Mono', monospace; opacity: .7; }
+  .scan-mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,245,196,.04); box-shadow: 0 0 16px rgba(0,245,196,.08); }
+  .scan-mode-btn.active span { color: var(--accent); }
+  .scan-mode-btn:hover:not(.active) { color: var(--text); border-color: rgba(255,255,255,.15); }
+
+  .img-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--border); margin: -1.5rem -1.5rem 1.25rem; }
+  .img-tab { padding: .9rem; background: none; border: none; color: var(--muted); font-family: 'Space Mono', monospace; font-size: .75rem; cursor: pointer; transition: all .2s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .img-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,245,196,.03); }
+  .img-tab:hover:not(.active) { color: var(--text); }
+
+  .drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 2rem 1rem; text-align: center; cursor: pointer; transition: all .25s; position: relative; background: var(--surface); }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: rgba(0,245,196,.03); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-zone h3 { font-size: .93rem; font-weight: 700; margin-bottom: .25rem; }
+  .drop-zone p  { font-size: .75rem; color: var(--muted); }
+  .drop-fmts { display: flex; gap: 5px; justify-content: center; margin-top: .6rem; flex-wrap: wrap; }
+  .drop-fmt  { font-family: 'Space Mono', monospace; font-size: .62rem; background: rgba(0,245,196,.08); border: 1px solid rgba(0,245,196,.2); color: var(--accent); padding: 2px 7px; border-radius: 4px; }
+
+  .cam-wrap  { border-radius: 10px; overflow: hidden; background: #000; position: relative; aspect-ratio: 4/3; max-height: 300px; }
+  #scanVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam-corner { position: absolute; inset: 0; pointer-events: none; }
+  .cam-corner::before, .cam-corner::after { content: ''; position: absolute; width: 24px; height: 24px; border-color: var(--accent); border-style: solid; }
+  .cam-corner::before { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+  .cam-corner::after  { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+  .cam-btns { display: flex; gap: .6rem; margin-top: .75rem; }
+  .cam-btn  { flex: 1; padding: .7rem; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: .83rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .cam-btn.cap { background: linear-gradient(135deg, var(--accent), #00c4a0); color: #000; }
+  .cam-btn.cap:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,245,196,.25); }
+  .cam-btn.stp { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+  .cam-btn.stp:hover { color: var(--error); border-color: rgba(248,113,113,.4); }
+
+  .img-preview { display: none; margin-top: .9rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .img-preview.show { display: block; }
+  .img-preview img { width: 100%; display: block; max-height: 260px; object-fit: contain; background: #000; }
+  .img-preview-bar { display: flex; gap: .5rem; padding: .6rem; background: var(--surface); border-top: 1px solid var(--border); }
+  .rmv-btn { flex: 1; padding: .55rem; border: 1px solid rgba(248,113,113,.3); border-radius: 7px; background: none; color: var(--error); font-family: 'Syne', sans-serif; font-size: .78rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+  .rmv-btn:hover { background: rgba(248,113,113,.08); }
+
+  .scan-result-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; font-size: .88rem; line-height: 1.75; color: var(--text); margin-top: 1rem; animation: fadeUp .35s ease; }
+  .scan-section-title { color: var(--accent); font-weight: 700; font-size: .8rem; margin: .65rem 0 .25rem; font-family: 'Space Mono', monospace; letter-spacing: .05em; }
+  .scan-step { padding: .45rem .75rem; border-left: 2px solid var(--accent2); background: rgba(124,58,237,.04); border-radius: 0 6px 6px 0; margin: .3rem 0; }
+  .scan-answer { margin-top: .75rem; padding: .7rem 1rem; background: rgba(0,245,196,.05); border: 1px solid rgba(0,245,196,.2); border-radius: 8px; color: var(--accent); font-weight: 700; }
+
+  #scanCamera { display: none; }
+  #scanCamera.active { display: block; }
+  #scanUpload.hidden { display: none; }
+  /* ── END SCANNER ── */
+
   /* ── RESPONSIVE ── */
   @media (max-width: 680px) {
     .mode-grid { grid-template-columns: repeat(3, 1fr); }
@@ -482,6 +538,7 @@
 <nav class="nav">
   <div class="nav-brand">⚛ PhysX</div>
   <button class="nav-tab active"  onclick="goPage('solve')">🧮 Solve</button>
+  <button class="nav-tab"         onclick="goPage('scanner')">📷 Scan Image</button>
   <button class="nav-tab"         onclick="goPage('history')">📋 History</button>
   <button class="nav-tab"         onclick="goPage('dashboard')">📊 Dashboard</button>
   <div class="nav-right">
@@ -619,7 +676,94 @@
 </div>
 </div>
 
-<footer>PhysX Solver v3 • Powered by Gemini AI • For educational use</footer>
+<!-- ═══════════════════════════════
+     PAGE: IMAGE SCANNER
+═══════════════════════════════ -->
+<div class="page" id="page-scanner">
+<div class="container">
+  <header>
+    <div class="logo-badge">📷 AI Vision</div>
+    <h1>Scan &amp; Solve</h1>
+    <p class="subtitle">Upload or capture a question image — instant solution</p>
+  </header>
+
+  <div class="input-panel">
+    <div class="img-tabs">
+      <button class="img-tab active" onclick="scanTab('upload')">📁 Upload Image</button>
+      <button class="img-tab"        onclick="scanTab('camera')">📷 Use Camera</button>
+    </div>
+
+    <div id="scanUpload">
+      <div class="drop-zone" id="scanDropZone">
+        <input type="file" id="scanFileInput" accept="image/*" onchange="scanHandleFile(this.files[0])">
+        <div style="font-size:2rem;margin-bottom:.5rem;">🖼️</div>
+        <h3>Drop your question image here</h3>
+        <p>or click to browse</p>
+        <div class="drop-fmts">
+          <span class="drop-fmt">JPG</span><span class="drop-fmt">PNG</span>
+          <span class="drop-fmt">WEBP</span><span class="drop-fmt">HEIC</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="scanCamera">
+      <div class="cam-wrap">
+        <video id="scanVideo" autoplay playsinline></video>
+        <div class="cam-corner"></div>
+      </div>
+      <div class="cam-btns">
+        <button class="cam-btn cap" onclick="scanCapture()">📸 Capture</button>
+        <button class="cam-btn stp" onclick="scanStopCam()">✕ Stop</button>
+      </div>
+    </div>
+
+    <div class="img-preview" id="scanPreview">
+      <img id="scanPreviewImg" src="" alt="Preview">
+      <div class="img-preview-bar">
+        <button class="rmv-btn" onclick="scanClearImg()">🗑 Remove Image</button>
+      </div>
+    </div>
+
+    <div class="input-row" style="margin-top:1rem;">
+      <select id="scanSubject">
+        <option value="auto">🔍 Auto-detect</option>
+        <option value="physics">⚛ Physics</option>
+        <option value="maths">📐 Maths</option>
+        <option value="chemistry">🧪 Chemistry</option>
+      </select>
+      <select id="scanType">
+        <option value="auto">Any type</option>
+        <option value="numerical">Numerical</option>
+        <option value="mcq">MCQ</option>
+        <option value="truefalse">True / False</option>
+        <option value="assertion">Assertion–Reason</option>
+        <option value="fillblank">Fill in Blank</option>
+      </select>
+    </div>
+
+    <div class="panel-label" style="margin-top:1rem;">ANSWER MODE</div>
+    <div class="scan-mode-toggle">
+      <button class="scan-mode-btn active" id="scanModeShort" onclick="setScanMode('short')">
+        ⚡ Quick Answer <span>Answer + formula only</span>
+      </button>
+      <button class="scan-mode-btn" id="scanModeLong" onclick="setScanMode('long')">
+        📖 Full Explanation <span>Step-by-step detailed</span>
+      </button>
+    </div>
+
+    <div style="display:flex;gap:.65rem;margin-top:.9rem;">
+      <button class="btn btn-primary" id="scanSolveBtn" onclick="scanSolve()" disabled style="flex:1;">📷 Scan &amp; Solve</button>
+      <button class="btn btn-secondary" onclick="scanClearImg()">✕ Clear</button>
+    </div>
+  </div>
+
+  <div class="error-msg" id="scanError"></div>
+  <div class="loading" id="scanLoading"><div class="spinner"></div>Scanning image...</div>
+  <div id="scanOutput"></div>
+</div>
+</div>
+
+<footer>PhysX Solver v3 • Powered by Groq &amp; Claude AI • For educational use</footer>
 
 <script>
 // ════════════════════════════════════════════════
@@ -678,10 +822,11 @@ function goPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  const idx = {solve:0, history:1, dashboard:2};
+  const idx = {solve:0, scanner:1, history:2, dashboard:3};
   document.querySelectorAll('.nav-tab')[idx[id]]?.classList.add('active');
   if (id === 'history')   renderHistory('all');
   if (id === 'dashboard') renderDashboard();
+  if (id !== 'scanner')   scanStopCam();
 }
 
 // ════════════════════════════════════════════════
@@ -1280,6 +1425,182 @@ function subjectTagIcon(s='') {
   if (l.includes('chem')) return '🧪';
   return '⚛';
 }
+
+// ════════════════════════════════════════════════
+//  IMAGE SCANNER
+// ════════════════════════════════════════════════
+let scanImgBase64 = null;
+let scanMimeType  = 'image/jpeg';
+let scanStream    = null;
+let scanMode      = 'short';
+
+function setScanMode(m) {
+  scanMode = m;
+  document.getElementById('scanModeShort').classList.toggle('active', m === 'short');
+  document.getElementById('scanModeLong').classList.toggle('active',  m === 'long');
+  const btn = document.getElementById('scanSolveBtn');
+  if (!btn.disabled) btn.textContent = m === 'short' ? '⚡ Quick Answer' : '📖 Full Explanation';
+}
+
+function scanTab(tab) {
+  document.querySelectorAll('.img-tab').forEach((b,i) =>
+    b.classList.toggle('active', (i===0 && tab==='upload') || (i===1 && tab==='camera'))
+  );
+  if (tab === 'upload') {
+    document.getElementById('scanUpload').classList.remove('hidden');
+    document.getElementById('scanCamera').classList.remove('active');
+    scanStopCam();
+  } else {
+    document.getElementById('scanUpload').classList.add('hidden');
+    document.getElementById('scanCamera').classList.add('active');
+    scanStartCam();
+  }
+}
+
+const _sdz = document.getElementById('scanDropZone');
+_sdz.addEventListener('dragover', e => { e.preventDefault(); _sdz.classList.add('drag-over'); });
+_sdz.addEventListener('dragleave', () => _sdz.classList.remove('drag-over'));
+_sdz.addEventListener('drop', e => {
+  e.preventDefault(); _sdz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) scanHandleFile(f);
+});
+
+function scanHandleFile(file) {
+  if (!file) return;
+  scanMimeType = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
+  const r = new FileReader();
+  r.onload = e => {
+    scanImgBase64 = e.target.result.split(',')[1];
+    document.getElementById('scanPreviewImg').src = e.target.result;
+    document.getElementById('scanPreview').classList.add('show');
+    const btn = document.getElementById('scanSolveBtn');
+    btn.disabled = false;
+    btn.textContent = scanMode === 'short' ? '⚡ Quick Answer' : '📖 Full Explanation';
+    scanHideErr(); scanClearOutput();
+  };
+  r.readAsDataURL(file);
+}
+
+function scanClearImg() {
+  scanImgBase64 = null;
+  document.getElementById('scanPreview').classList.remove('show');
+  document.getElementById('scanPreviewImg').src = '';
+  document.getElementById('scanFileInput').value = '';
+  const btn = document.getElementById('scanSolveBtn');
+  btn.disabled = true; btn.textContent = '📷 Scan & Solve';
+  scanClearOutput(); scanHideErr();
+}
+
+async function scanStartCam() {
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    document.getElementById('scanVideo').srcObject = scanStream;
+  } catch {
+    scanShowErr('Camera access denied. Please allow camera or use file upload.');
+    scanTab('upload');
+  }
+}
+function scanStopCam() {
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+}
+function scanCapture() {
+  const v = document.getElementById('scanVideo');
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  scanMimeType = 'image/jpeg';
+  const url = c.toDataURL('image/jpeg', 0.9);
+  scanImgBase64 = url.split(',')[1];
+  document.getElementById('scanPreviewImg').src = url;
+  document.getElementById('scanPreview').classList.add('show');
+  const btn = document.getElementById('scanSolveBtn');
+  btn.disabled = false;
+  btn.textContent = scanMode === 'short' ? '⚡ Quick Answer' : '📖 Full Explanation';
+  scanTab('upload'); scanClearOutput(); scanHideErr();
+}
+
+async function scanSolve() {
+  if (!scanImgBase64) return;
+  const subj = document.getElementById('scanSubject').value;
+  const type = document.getElementById('scanType').value;
+  const subjMap = { physics:'Physics', maths:'Mathematics', chemistry:'Chemistry', auto:'Physics/Maths/Chemistry' };
+  const typeMap = { numerical:'numerical', mcq:'MCQ', truefalse:'True/False', assertion:'Assertion-Reason', fillblank:'Fill in the blank', auto:'any type' };
+
+  const shortPrompt = `You are an expert ${subjMap[subj]} teacher (Class 10-12 NEET/JEE).
+Look at this image. It has a ${typeMap[type]} question.
+Reply in this EXACT format:
+📋 QUESTION:
+[One-line summary of the question]
+✅ ANSWER:
+[Final answer only]
+💡 FORMULA/CONCEPT:
+[Key formula or concept — one line]
+Keep it under 6 lines. No long working.`;
+
+  const longPrompt = `You are an expert ${subjMap[subj]} teacher (Class 10-12 NEET/JEE).
+Look at this image carefully. It has a ${typeMap[type]} question.
+Reply in this EXACT format:
+📋 QUESTION DETECTED:
+[Full question text]
+📚 SUBJECT & TOPIC:
+[Subject and topic]
+🔢 STEP-BY-STEP SOLUTION:
+[Number every step. Show all working and substitutions.]
+✅ FINAL ANSWER:
+[Clear final answer]
+💡 KEY CONCEPT:
+[2-3 sentence concept explanation]`;
+
+  const prompt = scanMode === 'short' ? shortPrompt : longPrompt;
+
+  document.getElementById('scanLoading').classList.add('show');
+  document.getElementById('scanSolveBtn').disabled = true;
+  scanHideErr(); scanClearOutput();
+
+  try {
+    // Calls our own /api/scan backend — API key stays safe on server
+    const res = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: scanImgBase64, mimeType: scanMimeType, prompt })
+    });
+    let data;
+    try { data = await res.json(); } catch (_) { throw new Error(`Server returned invalid JSON (HTTP ${res.status})`); }
+    if (!res.ok) throw new Error(data?.error || `Server error ${res.status}`);
+    if (!data.text) throw new Error('Empty response from AI. Please try again.');
+
+    document.getElementById('scanLoading').classList.remove('show');
+    document.getElementById('scanSolveBtn').disabled = false;
+    scanRenderResult(data.text, subj);
+    Session.record('numerical', 'Image scan — ' + (subj !== 'auto' ? subjMap[subj] : 'Auto'), subjMap[subj] || 'General', 'Image Scan', 'solved');
+  } catch(err) {
+    document.getElementById('scanLoading').classList.remove('show');
+    document.getElementById('scanSolveBtn').disabled = false;
+    scanShowErr('Error: ' + err.message);
+  }
+}
+
+function scanRenderResult(text, subj) {
+  let html = '<div class="scan-result-box">';
+  text.split('\n').forEach(line => {
+    if (line.startsWith('📋') || line.startsWith('📚') || line.startsWith('🔢') || line.startsWith('💡')) {
+      html += `<div class="scan-section-title">${line}</div>`;
+    } else if (line.startsWith('✅')) {
+      html += `<div class="scan-answer">${line}</div>`;
+    } else if (/^\d+[\.\)]/.test(line.trim())) {
+      html += `<div class="scan-step">${line}</div>`;
+    } else if (line.trim()) {
+      html += `<div>${line}</div>`;
+    }
+  });
+  html += '</div>';
+  document.getElementById('scanOutput').innerHTML = html;
+}
+
+function scanClearOutput() { document.getElementById('scanOutput').innerHTML = ''; }
+function scanShowErr(msg)   { const e = document.getElementById('scanError'); e.textContent = msg; e.classList.add('show'); }
+function scanHideErr()      { document.getElementById('scanError').classList.remove('show'); }
 
 // ── INIT ──
 setMode('numerical');

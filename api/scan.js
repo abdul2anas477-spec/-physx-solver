@@ -1,6 +1,6 @@
 // api/scan.js — PhysX Solver image scanner backend
-// Uses Google Gemini API (FREE tier) — supports vision/image input
-// Get free key at: https://aistudio.google.com/app/apikey
+// Uses OpenRouter API (FREE models available) — supports vision/image input
+// Get free key at: https://openrouter.ai
 // Expects: POST { imageBase64: string, mimeType: string, prompt: string }
 // Returns: { text: string }
 
@@ -28,74 +28,77 @@ export default async function handler(req, res) {
   const safeMimeType = validMimeTypes.includes(mimeType) ? mimeType : "image/jpeg";
 
   // ── API key ───────────────────────────────────────────────────────
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.error("[PhysX] GEMINI_API_KEY environment variable is not set.");
-    return res.status(500).json({ error: "Server configuration error: GEMINI_API_KEY not set." });
+    console.error("[PhysX] OPENROUTER_API_KEY environment variable is not set.");
+    return res.status(500).json({ error: "Server configuration error: OPENROUTER_API_KEY not set." });
   }
 
-  // ── Call Gemini ───────────────────────────────────────────────────
-  let geminiResponse;
+  // ── Call OpenRouter ───────────────────────────────────────────────
+  let openRouterResponse;
   try {
-    geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  inline_data: {
-                    mime_type: safeMimeType,
-                    data: imageBase64,
-                  },
+    openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://physx-solver.vercel.app",
+        "X-Title": "PhysX Solver",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-exp:free",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${safeMimeType};base64,${imageBase64}`,
                 },
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 1024,
+              },
+              {
+                type: "text",
+                text: prompt,
+              },
+            ],
           },
-        }),
-      }
-    );
+        ],
+        max_tokens: 1024,
+        temperature: 0.3,
+      }),
+    });
   } catch (networkErr) {
-    console.error("[PhysX] Network error reaching Gemini:", networkErr.message);
-    return res.status(502).json({ error: "Could not reach Gemini API. Check server connectivity." });
+    console.error("[PhysX] Network error reaching OpenRouter:", networkErr.message);
+    return res.status(502).json({ error: "Could not reach OpenRouter API. Check server connectivity." });
   }
 
   // ── Handle non-OK responses ───────────────────────────────────────
-  if (!geminiResponse.ok) {
+  if (!openRouterResponse.ok) {
     let errBody = {};
-    try { errBody = await geminiResponse.json(); } catch (_) {}
-    const status  = geminiResponse.status;
-    const message = errBody?.error?.message || `Gemini returned HTTP ${status}`;
-    console.error(`[PhysX] Gemini error ${status}:`, message);
+    try { errBody = await openRouterResponse.json(); } catch (_) {}
+    const status  = openRouterResponse.status;
+    const message = errBody?.error?.message || `OpenRouter returned HTTP ${status}`;
+    console.error(`[PhysX] OpenRouter error ${status}:`, message);
 
     if (status === 429) return res.status(429).json({ error: "Rate limit reached. Please wait a moment." });
-    if (status === 401) return res.status(401).json({ error: "Gemini API key is invalid." });
+    if (status === 401) return res.status(401).json({ error: "OpenRouter API key is invalid." });
     if (status === 400) return res.status(400).json({ error: `Bad request: ${message}` });
     return res.status(502).json({ error: message });
   }
 
   // ── Parse response ────────────────────────────────────────────────
-  let geminiData;
+  let data;
   try {
-    geminiData = await geminiResponse.json();
+    data = await openRouterResponse.json();
   } catch (parseErr) {
-    console.error("[PhysX] Failed to parse Gemini JSON:", parseErr.message);
-    return res.status(502).json({ error: "Unexpected response format from Gemini." });
+    console.error("[PhysX] Failed to parse OpenRouter JSON:", parseErr.message);
+    return res.status(502).json({ error: "Unexpected response format from OpenRouter." });
   }
 
-  const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const rawText = data?.choices?.[0]?.message?.content ?? "";
   if (!rawText) {
-    return res.status(502).json({ error: "Gemini returned an empty response." });
+    return res.status(502).json({ error: "OpenRouter returned an empty response." });
   }
 
   return res.status(200).json({ text: rawText.trim() });

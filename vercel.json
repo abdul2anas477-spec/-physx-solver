@@ -4,10 +4,10 @@
   ],
   "functions": {
     "api/solve.js": {
-      "maxDuration": 30
+      "maxDuration": 40
     },
     "api/scan.js": {
-      "maxDuration": 30
+      "maxDuration": 40
     }
   }
 }
